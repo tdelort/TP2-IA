@@ -11,13 +11,15 @@
 #define ID_OB_PATH                      40006
 #define ID_AID_DETECTIONBOX             40007
 #define IDR_PARTITIONING                40008
-#define IDR_WEIGHTED_SUM                40009
-#define IDR_PRIORITIZED                 40010
-#define IDR_DITHERED                    40011
+//#define IDR_WEIGHTED_SUM                40009
+//#define IDR_PRIORITIZED                 40010
+//#define IDR_DITHERED                    40011
 #define ID_VIEW_KEYS                    40012
 #define ID_VIEW_FPS                     40013
 #define ID_MENU_SMOOTHING               40014
 #define IDM_PARTITION_VIEW_NEIGHBORS    40015
+#define ID_SC_WANDER					40016
+#define ID_SC_USER_CONTROL				40017
 
 // Next default values for new objects
 // 

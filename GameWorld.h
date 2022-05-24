@@ -26,6 +26,7 @@
 class Obstacle;
 class Wall2D;
 class Path;
+class LeaderAgent;
 
 
 typedef std::vector<BaseGameEntity*>::iterator  ObIt;
@@ -37,6 +38,9 @@ private:
 
   //a container of all the moving entities
   std::vector<Vehicle*>         m_Vehicles;
+  
+  //a pointer to the leader entity (also present in m_Vehicles
+  LeaderAgent*                  m_pLeader;
 
   //any obstacles
   std::vector<BaseGameEntity*>  m_Obstacles;
@@ -142,6 +146,10 @@ public:
   void  ToggleViewKeys(){m_bViewKeys = !m_bViewKeys;}
   bool  ViewKeys()const{return m_bViewKeys;}
 
+  enum class Scenario {
+  	  Wander,
+  	  UserControl
+  };
 };
 
 

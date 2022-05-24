@@ -21,12 +21,6 @@ class ChasingAgent : public Vehicle
 public:
 	ChasingAgent(GameWorld* world, Vector2D position, double rotation, Vehicle* target, Vector2D offset);
 	~ChasingAgent();
-	
-	void Update(double time_elapsed) override; 
 
-	void SetOffset(const Vector2D& offset);
-	Vector2D Offset() const;
-
-	void SetTarget(Vehicle* target);
-	Vehicle* Target() const;
+	void Update(double time_elapsed) override;
 };

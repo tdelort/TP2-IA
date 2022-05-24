@@ -38,11 +38,10 @@ BEGIN
         MENUITEM "On/Off",                      IDR_PARTITIONING
         MENUITEM "View Neighbors",              IDM_PARTITION_VIEW_NEIGHBORS
     END
-    POPUP "Calculate Method"
+    POPUP "Scenario"
     BEGIN
-        MENUITEM "Weighted Sum",                IDR_WEIGHTED_SUM
-        MENUITEM "Prioritized",                 IDR_PRIORITIZED
-        MENUITEM "Dithered",                    IDR_DITHERED
+        MENUITEM "Wander",                      ID_SC_WANDER
+        MENUITEM "User Control",                ID_SC_USER_CONTROL
     END
     POPUP "Info"
     BEGIN

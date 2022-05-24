@@ -1,11 +1,16 @@
 #pragma once
 #include "Vehicle.h"
+#include "GameWorld.h"
 
 class LeaderAgent : public Vehicle
 {
-	LeaderAgent(GameWorld* world, Vector2D position, double rotation, Vehicle* target, Vector2D offset);
+	Vector2D m_target;
+public:
+	LeaderAgent(GameWorld* world, Vector2D position, double rotation);
 	~LeaderAgent();
 	
-	void Update(double time_elapsed) override; 
+
+	void SetScenario(const GameWorld::Scenario scenario);
+	void SetTarget(const Vector2D target);
 };
 

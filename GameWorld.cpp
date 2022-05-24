@@ -1,5 +1,7 @@
 #include "GameWorld.h"
 #include "Vehicle.h"
+#include "ChasingAgent.h"
+#include "LeaderAgent.h"
 #include "constants.h"
 #include "Obstacle.h"
 #include "2d/Geometry.h"
@@ -16,6 +18,7 @@
 #include "resource.h"
 
 #include <list>
+#include <algorithm>
 using std::list;
 
 
@@ -49,48 +52,34 @@ GameWorld::GameWorld(int cx, int cy):
   m_pPath = new Path(5, border, border, cx-border, cy-border, true); 
 
   //setup the agents
-  for (int a=0; a<Prm.NumAgents; ++a)
+  m_pLeader = new LeaderAgent(this,
+      Vector2D(cx / 2.0 + RandomClamped() * cx / 2.0, cy / 2.0 + RandomClamped() * cy / 2.0),
+      RandFloat() * TwoPi
+  );
+
+  m_Vehicles.push_back(m_pLeader);
+  m_pCellSpace->AddEntity(m_pLeader);
+  
+  for (int a=0; a<Prm.NumAgents - 1; ++a)
   {
 
     //determine a random starting position
     Vector2D SpawnPos = Vector2D(cx/2.0+RandomClamped()*cx/2.0,
                                  cy/2.0+RandomClamped()*cy/2.0);
 
+    ChasingAgent* pAgent = new ChasingAgent(this,
+        SpawnPos,
+        RandFloat() * TwoPi,
+        m_Vehicles.back(),
+        Vector2D(-10, 0)
+    );
 
-    Vehicle* pVehicle = new Vehicle(this,
-                                    SpawnPos,                 //initial position
-                                    RandFloat()*TwoPi,        //start rotation
-                                    Vector2D(0,0),            //velocity
-                                    Prm.VehicleMass,          //mass
-                                    Prm.MaxSteeringForce,     //max force
-                                    Prm.MaxSpeed,             //max velocity
-                                    Prm.MaxTurnRatePerSecond, //max turn rate
-                                    Prm.VehicleScale);        //scale
-
-    pVehicle->Steering()->FlockingOn();
-
-    m_Vehicles.push_back(pVehicle);
+    m_Vehicles.push_back(pAgent);
 
     //add it to the cell subdivision
-    m_pCellSpace->AddEntity(pVehicle);
+    m_pCellSpace->AddEntity(pAgent);
   }
 
-
-#define SHOAL
-#ifdef SHOAL
-  m_Vehicles[Prm.NumAgents-1]->Steering()->FlockingOff();
-  m_Vehicles[Prm.NumAgents-1]->SetScale(Vector2D(10, 10));
-  m_Vehicles[Prm.NumAgents-1]->Steering()->WanderOn();
-  m_Vehicles[Prm.NumAgents-1]->SetMaxSpeed(70);
-
-
-   for (int i=0; i<Prm.NumAgents-1; ++i)
-  {
-    m_Vehicles[i]->Steering()->EvadeOn(m_Vehicles[Prm.NumAgents-1]);
-
-  }
-#endif
- 
   //create any obstacles or walls
   //CreateObstacles();
   //CreateWalls();
@@ -243,6 +232,8 @@ void GameWorld::SetCrosshair(POINTS p)
   }
   m_vCrosshair.x = (double)p.x;
   m_vCrosshair.y = (double)p.y;
+
+  m_pLeader->SetTarget(m_vCrosshair);
 }
 
 
@@ -434,50 +425,6 @@ void GameWorld::HandleMenuItems(WPARAM wParam, HWND hwnd)
       }
       break;
         
-
-    case IDR_WEIGHTED_SUM:
-      {
-        ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_CHECKED);
-        ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_UNCHECKED);
-        ChangeMenuState(hwnd, IDR_DITHERED, MFS_UNCHECKED);
-
-        for (unsigned int i=0; i<m_Vehicles.size(); ++i)
-        {
-          m_Vehicles[i]->Steering()->SetSummingMethod(SteeringBehavior::weighted_average);
-        }
-      }
-
-      break;
-
-    case IDR_PRIORITIZED:
-      {
-        ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_UNCHECKED);
-        ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_CHECKED);
-        ChangeMenuState(hwnd, IDR_DITHERED, MFS_UNCHECKED);
-
-        for (unsigned int i=0; i<m_Vehicles.size(); ++i)
-        {
-          m_Vehicles[i]->Steering()->SetSummingMethod(SteeringBehavior::prioritized);
-        }
-      }
-
-      break;
-
-    case IDR_DITHERED:
-      {
-        ChangeMenuState(hwnd, IDR_WEIGHTED_SUM, MFS_UNCHECKED);
-        ChangeMenuState(hwnd, IDR_PRIORITIZED, MFS_UNCHECKED);
-        ChangeMenuState(hwnd, IDR_DITHERED, MFS_CHECKED);
-
-        for (unsigned int i=0; i<m_Vehicles.size(); ++i)
-        {
-          m_Vehicles[i]->Steering()->SetSummingMethod(SteeringBehavior::dithered);
-        }
-      }
-
-      break;
-
-
       case ID_VIEW_KEYS:
       {
         ToggleViewKeys();
@@ -506,6 +453,42 @@ void GameWorld::HandleMenuItems(WPARAM wParam, HWND hwnd)
         CheckMenuItemAppropriately(hwnd, ID_MENU_SMOOTHING, m_Vehicles[0]->isSmoothingOn());
       }
 
+      break;
+
+      case ID_SC_WANDER:
+      {
+          ChangeMenuState(hwnd, ID_SC_WANDER, MFS_CHECKED);
+          ChangeMenuState(hwnd, ID_SC_USER_CONTROL, MFS_UNCHECKED);
+          m_pLeader->SetScenario(GameWorld::Scenario::Wander);
+
+          for (unsigned int i = 1; i < m_Vehicles.size(); i++)
+          {
+              m_Vehicles[i]->Steering()->SetTargetAgent1(m_Vehicles[i - 1]);
+              m_Vehicles[i]->Steering()->SetOffset(Vector2D(-10, 0));
+          }
+      }
+      break;
+
+      case ID_SC_USER_CONTROL:
+      {
+          ChangeMenuState(hwnd, ID_SC_WANDER, MFS_UNCHECKED);
+          ChangeMenuState(hwnd, ID_SC_USER_CONTROL, MFS_CHECKED);
+          m_pLeader->SetScenario(GameWorld::Scenario::UserControl);
+
+          double radius = 10 + m_Vehicles.size();
+          for (unsigned int i = 0; i < m_Vehicles.size(); i++)
+          {
+              if (m_Vehicles[i] == m_pLeader)
+                  continue;
+
+              double angle = TwoPi / (m_Vehicles.size() - 1) * i;
+              m_Vehicles[i]->Steering()->SetOffset(
+                  Vector2D(radius * cos(angle) + 5, radius * sin(angle))
+              );
+
+              m_Vehicles[i]->Steering()->SetTargetAgent1(m_pLeader);
+          }
+      }
       break;
       
   }//end switch
@@ -558,7 +541,7 @@ void GameWorld::Render()
     }
   }  
 
-//#define CROSSHAIR
+#define CROSSHAIR
 #ifdef CROSSHAIR
   //and finally the crosshair
   gdi->RedPen();
